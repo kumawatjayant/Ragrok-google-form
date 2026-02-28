@@ -62,6 +62,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [logoClicks, setLogoClicks] = useState(0);
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
+  const [assessmentId, setAssessmentId] = useState<number | null>(null);
 
   const handleLogoClick = () => {
     const newClicks = logoClicks + 1;
@@ -204,7 +205,6 @@ export default function App() {
   const progress = Math.round((currentIdx / QUESTIONS.length) * 100);
 
   const scores = useMemo(() => {
-    if (screen !== 'result') return { total: 0, k: 0, e: 0, m: 0 };
     let k = 0, kM = 0, e = 0, eM = 0, m = 0, mM = 0;
     QUESTIONS.forEach(q => {
       const a = answers[q.id];
@@ -224,7 +224,7 @@ export default function App() {
       e: Math.round((e / (eM || 1)) * 100),
       m: Math.round((m / (mM || 1)) * 100)
     };
-  }, [screen, answers]);
+  }, [answers]);
 
   const level = useMemo(() => LEVELS.find(l => scores.total <= l.max) || LEVELS[LEVELS.length - 1], [scores.total]);
 
@@ -233,11 +233,48 @@ export default function App() {
     setScreen('question');
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentIdx < QUESTIONS.length - 1) {
       setCurrentIdx(prev => prev + 1);
     } else {
       setScreen('result');
+      
+      // Auto-save assessment data when results are shown
+      if (supabase) {
+        try {
+          const payload = {
+            name: userName,
+            field: userField,
+            email: email || '', // Use existing email if they somehow have it
+            score: scores.total,
+            knowledge_score: scores.k,
+            experience_score: scores.e,
+            mindset_score: scores.m,
+            answers_json: answers
+          };
+
+          if (assessmentId) {
+            // Update existing record if they went back and changed something
+            await supabase
+              .from('assessments')
+              .update(payload)
+              .eq('id', assessmentId);
+          } else {
+            // Insert new record
+            const { data, error } = await supabase
+              .from('assessments')
+              .insert([payload])
+              .select();
+            
+            if (data && data[0]) {
+              setAssessmentId(data[0].id);
+            }
+            if (error) console.error('Auto-save error:', error);
+          }
+        } catch (err) {
+          console.error('Auto-save failed:', err);
+        }
+      }
     }
   };
 
@@ -252,31 +289,42 @@ export default function App() {
     setIsSubmitting(true);
     try {
       if (!supabase) {
-        alert('Database not connected! Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Netlify Environment Variables.');
+        alert('Database not connected!');
         setIsSubmitting(false);
         return;
       }
 
-      const { error } = await supabase
-        .from('assessments')
-        .insert([
-          {
-            name: userName,
-            field: userField,
-            email: email,
-            score: scores.total,
-            knowledge_score: scores.k,
-            experience_score: scores.e,
-            mindset_score: scores.m,
-            answers_json: answers
-          }
-        ]);
+      if (assessmentId) {
+        // Update existing record with email
+        const { error } = await supabase
+          .from('assessments')
+          .update({ email: email })
+          .eq('id', assessmentId);
+        
+        if (error) throw error;
+      } else {
+        // Fallback: Insert new if ID wasn't captured
+        const { error } = await supabase
+          .from('assessments')
+          .insert([
+            {
+              name: userName,
+              field: userField,
+              email: email,
+              score: scores.total,
+              knowledge_score: scores.k,
+              experience_score: scores.e,
+              mindset_score: scores.m,
+              answers_json: answers
+            }
+          ]);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
       alert('Your roadmap is on its way!');
     } catch (error) {
       console.error('Supabase submission error:', error);
-      alert('Error saving your assessment to Supabase.');
+      alert('Error saving your email.');
     } finally {
       setIsSubmitting(false);
     }
