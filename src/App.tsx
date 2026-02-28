@@ -61,6 +61,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [logoClicks, setLogoClicks] = useState(0);
+  const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
 
   const handleLogoClick = () => {
     const newClicks = logoClicks + 1;
@@ -162,7 +163,7 @@ export default function App() {
   };
 
   const exportCSV = () => {
-    const headers = ['ID', 'Name', 'Field', 'Email', 'Score', 'Knowledge', 'Experience', 'Mindset', 'Date'];
+    const headers = ['ID', 'Name', 'Field', 'Email', 'Score', 'Knowledge', 'Experience', 'Mindset', 'Date', 'Full Answers'];
     const rows = submissions.map(s => [
       s.id,
       s.name,
@@ -172,9 +173,10 @@ export default function App() {
       s.knowledge_score,
       s.experience_score,
       s.mindset_score,
-      s.created_at
+      s.created_at,
+      JSON.stringify(s.answers_json || {}).replace(/"/g, '""')
     ]);
-    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const csvContent = [headers, ...rows].map(e => `"${e.join('","')}"`).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -265,7 +267,8 @@ export default function App() {
             score: scores.total,
             knowledge_score: scores.k,
             experience_score: scores.e,
-            mindset_score: scores.m
+            mindset_score: scores.m,
+            answers_json: answers
           }
         ]);
 
@@ -414,12 +417,22 @@ export default function App() {
                                   {new Date(s.created_at).toLocaleDateString()}
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                  <button 
-                                    onClick={() => handleDelete(s.id)}
-                                    className="p-2 text-text-muted hover:text-red-400 transition-colors"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button 
+                                      onClick={() => setSelectedSubmission(s)}
+                                      className="p-2 text-text-muted hover:text-gold transition-colors"
+                                      title="View Details"
+                                    >
+                                      <Search size={16} />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDelete(s.id)}
+                                      className="p-2 text-text-muted hover:text-red-400 transition-colors"
+                                      title="Delete"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))
@@ -429,6 +442,105 @@ export default function App() {
                     </div>
                   </div>
                 )}
+
+                {/* Submission Detail Modal */}
+                <AnimatePresence>
+                  {selectedSubmission && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setSelectedSubmission(null)}
+                        className="absolute inset-0 bg-bg/80 backdrop-blur-sm"
+                      />
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="relative w-full max-w-3xl max-h-[85vh] overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
+                      >
+                        <div className="flex items-center justify-between border-b border-border px-8 py-6">
+                          <div>
+                            <h3 className="font-clash text-xl font-bold">{selectedSubmission.name}'s Assessment</h3>
+                            <p className="text-sm text-text-muted">{selectedSubmission.email} • {selectedSubmission.field}</p>
+                          </div>
+                          <button 
+                            onClick={() => setSelectedSubmission(null)}
+                            className="rounded-full p-2 hover:bg-surface2 transition-colors"
+                          >
+                            <RotateCcw size={20} className="rotate-45" />
+                          </button>
+                        </div>
+                        
+                        <div className="overflow-y-auto p-8 max-h-[calc(85vh-100px)]">
+                          <div className="grid grid-cols-4 gap-4 mb-10">
+                            <div className="rounded-2xl bg-surface2 p-4 text-center">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Total Score</div>
+                              <div className="font-clash text-2xl font-bold text-gold">{selectedSubmission.score}</div>
+                            </div>
+                            <div className="rounded-2xl bg-surface2 p-4 text-center">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Knowledge</div>
+                              <div className="font-clash text-2xl font-bold text-text">{selectedSubmission.knowledge_score}%</div>
+                            </div>
+                            <div className="rounded-2xl bg-surface2 p-4 text-center">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Experience</div>
+                              <div className="font-clash text-2xl font-bold text-text">{selectedSubmission.experience_score}%</div>
+                            </div>
+                            <div className="rounded-2xl bg-surface2 p-4 text-center">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Mindset</div>
+                              <div className="font-clash text-2xl font-bold text-text">{selectedSubmission.mindset_score}%</div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-8">
+                            {QUESTIONS.map((q, idx) => {
+                              const ans = selectedSubmission.answers_json?.[q.id];
+                              return (
+                                <div key={q.id} className="border-l-2 pl-6 py-1" style={{ borderColor: q.color }}>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-surface2 text-text-muted">Q{idx + 1}</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted" style={{ color: q.color }}>{q.cat}</span>
+                                  </div>
+                                  <h4 className="font-medium text-text mb-4 leading-relaxed">{q.text}</h4>
+                                  
+                                  <div className="bg-bg/50 rounded-xl p-4 border border-border/50">
+                                    <div className="text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Answer:</div>
+                                    <div className="text-sm text-text-secondary leading-relaxed">
+                                      {ans === undefined || ans === null ? (
+                                        <span className="italic opacity-50">No answer provided</span>
+                                      ) : q.type === 'mcq' ? (
+                                        <div className="flex items-start gap-3">
+                                          <span className="font-bold text-gold">{String.fromCharCode(65 + ans)}.</span>
+                                          <span>{q.opts[ans]?.t}</span>
+                                        </div>
+                                      ) : q.type === 'scale' ? (
+                                        <div className="flex items-center gap-3">
+                                          <span className="font-clash font-bold text-gold text-lg">{ans}</span>
+                                          <span className="text-xs text-text-muted">({q.labels?.[0]} to {q.labels?.[1]})</span>
+                                        </div>
+                                      ) : q.type === 'multi' ? (
+                                        <div className="flex flex-wrap gap-2">
+                                          {ans.map((optIdx: number) => (
+                                            <span key={optIdx} className="px-3 py-1 rounded-lg bg-surface2 border border-border text-xs">
+                                              {q.opts[optIdx]?.t}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <div className="whitespace-pre-wrap italic">"{ans}"</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </motion.div>
+                    </div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             )}
 
