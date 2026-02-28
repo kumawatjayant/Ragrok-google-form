@@ -171,4 +171,60 @@ body::after {
   box-shadow: none;
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .fixed.inset-0.z-\[100\], .fixed.inset-0.z-\[100\] * {
+    visibility: visible;
+  }
+  .fixed.inset-0.z-\[100\] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    background: white !important;
+    padding: 0 !important;
+  }
+  .fixed.inset-0.z-\[100\] .absolute.inset-0 {
+    display: none !important;
+  }
+  .fixed.inset-0.z-\[100\] .relative.w-full {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+  .fixed.inset-0.z-\[100\] .overflow-y-auto {
+    overflow: visible !important;
+    max-height: none !important;
+    padding: 0 !important;
+  }
+  .fixed.inset-0.z-\[100\] .flex.items-center.justify-between.border-b {
+    border-bottom: 2px solid #eee !important;
+    padding-bottom: 20px !important;
+  }
+  .fixed.inset-0.z-\[100\] .flex.items-center.gap-2 {
+    display: none !important; /* Hide print/copy/close buttons */
+  }
+  .fixed.inset-0.z-\[100\] .text-text, 
+  .fixed.inset-0.z-\[100\] .text-text-secondary,
+  .fixed.inset-0.z-\[100\] .text-text-muted {
+    color: black !important;
+  }
+  .fixed.inset-0.z-\[100\] .bg-surface,
+  .fixed.inset-0.z-\[100\] .bg-surface2,
+  .fixed.inset-0.z-\[100\] .bg-bg\/50 {
+    background: #f9f9f9 !important;
+    border: 1px solid #eee !important;
+  }
+  .fixed.inset-0.z-\[100\] .border-l-2 {
+    border-left-width: 4px !important;
+  }
+}
+
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, CheckCircle2, Star, ChevronLeft, ChevronRight, Mail, Map, RotateCcw, LayoutDashboard, LogOut, Download, Trash2, Search } from 'lucide-react';
+import { Clock, CheckCircle2, Star, ChevronLeft, ChevronRight, Mail, Map, RotateCcw, LayoutDashboard, LogOut, Download, Trash2, Search, Printer, Copy } from 'lucide-react';
 
 const QUESTIONS = [
   {id:1,cat:'Knowledge',color:'#F0C040',text:"When someone says AI uses 'Large Language Models', what does that mean to you?",hint:"Honest answer only — this isn't a test with wrong answers.",type:'mcq',opts:[{t:"I've heard the term but genuinely don't know what it means",s:0},{t:"Something about machines trained on language from the internet",s:1},{t:"Models trained on text data that predict and generate language statistically",s:2},{t:"Transformer-based neural networks that model probability distributions over token sequences",s:3}]},
@@ -176,7 +176,7 @@ export default function App() {
       s.created_at,
       JSON.stringify(s.answers_json || {}).replace(/"/g, '""')
     ]);
-    const csvContent = [headers, ...rows].map(e => `"${e.join('","')}"`).join("\n");
+    const csvContent = [headers, ...rows].map(e => `"${e.map(val => String(val).replace(/"/g, '""')).join('","')}"`).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -465,12 +465,31 @@ export default function App() {
                             <h3 className="font-clash text-xl font-bold">{selectedSubmission.name}'s Assessment</h3>
                             <p className="text-sm text-text-muted">{selectedSubmission.email} • {selectedSubmission.field}</p>
                           </div>
-                          <button 
-                            onClick={() => setSelectedSubmission(null)}
-                            className="rounded-full p-2 hover:bg-surface2 transition-colors"
-                          >
-                            <RotateCcw size={20} className="rotate-45" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => window.print()}
+                              className="rounded-full p-2 hover:bg-surface2 transition-colors text-text-muted hover:text-gold"
+                              title="Print Assessment"
+                            >
+                              <Printer size={18} />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(JSON.stringify(selectedSubmission, null, 2));
+                                alert('Assessment data copied to clipboard!');
+                              }}
+                              className="rounded-full p-2 hover:bg-surface2 transition-colors text-text-muted hover:text-gold"
+                              title="Copy JSON Data"
+                            >
+                              <Copy size={18} />
+                            </button>
+                            <button 
+                              onClick={() => setSelectedSubmission(null)}
+                              className="rounded-full p-2 hover:bg-surface2 transition-colors"
+                            >
+                              <RotateCcw size={20} className="rotate-45" />
+                            </button>
+                          </div>
                         </div>
                         
                         <div className="overflow-y-auto p-8 max-h-[calc(85vh-100px)]">
@@ -493,45 +512,92 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className="space-y-8">
+                          <div className="space-y-12">
                             {QUESTIONS.map((q, idx) => {
                               const ans = selectedSubmission.answers_json?.[q.id];
                               return (
-                                <div key={q.id} className="border-l-2 pl-6 py-1" style={{ borderColor: q.color }}>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-surface2 text-text-muted">Q{idx + 1}</span>
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted" style={{ color: q.color }}>{q.cat}</span>
-                                  </div>
-                                  <h4 className="font-medium text-text mb-4 leading-relaxed">{q.text}</h4>
-                                  
-                                  <div className="bg-bg/50 rounded-xl p-4 border border-border/50">
-                                    <div className="text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Answer:</div>
-                                    <div className="text-sm text-text-secondary leading-relaxed">
-                                      {ans === undefined || ans === null ? (
-                                        <span className="italic opacity-50">No answer provided</span>
-                                      ) : q.type === 'mcq' ? (
-                                        <div className="flex items-start gap-3">
-                                          <span className="font-bold text-gold">{String.fromCharCode(65 + ans)}.</span>
-                                          <span>{q.opts[ans]?.t}</span>
-                                        </div>
-                                      ) : q.type === 'scale' ? (
-                                        <div className="flex items-center gap-3">
-                                          <span className="font-clash font-bold text-gold text-lg">{ans}</span>
-                                          <span className="text-xs text-text-muted">({q.labels?.[0]} to {q.labels?.[1]})</span>
-                                        </div>
-                                      ) : q.type === 'multi' ? (
-                                        <div className="flex flex-wrap gap-2">
-                                          {ans.map((optIdx: number) => (
-                                            <span key={optIdx} className="px-3 py-1 rounded-lg bg-surface2 border border-border text-xs">
-                                              {q.opts[optIdx]?.t}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <div className="whitespace-pre-wrap italic">"{ans}"</div>
-                                      )}
+                                <div key={q.id} className="relative">
+                                  <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-3">
+                                      <span className="flex h-6 w-6 items-center justify-center rounded bg-surface2 text-[10px] font-bold text-text-muted">
+                                        {idx + 1}
+                                      </span>
+                                      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: q.color }}>
+                                        {q.cat}
+                                      </span>
                                     </div>
                                   </div>
+                                  
+                                  <h4 className="font-clash text-xl font-semibold text-text mb-6 leading-tight">
+                                    {q.text}
+                                  </h4>
+                                  
+                                  <div className="pointer-events-none opacity-90">
+                                    {q.type === 'mcq' && (
+                                      <div className="flex flex-col gap-2">
+                                        {q.opts?.map((opt, i) => (
+                                          <div
+                                            key={i}
+                                            className={`flex items-start gap-4 rounded-xl border px-4 py-3 text-left ${ans === i ? 'border-gold-border bg-gold-dim' : 'border-border bg-surface/50'}`}
+                                          >
+                                            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-[10px] font-bold ${ans === i ? 'bg-gold border-gold text-[#08090C]' : 'bg-surface2 border-border text-text-muted'}`}>
+                                              {String.fromCharCode(65 + i)}
+                                            </span>
+                                            <span className={`text-sm leading-relaxed ${ans === i ? 'text-text' : 'text-text-secondary'}`}>
+                                              {opt.t}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {q.type === 'scale' && (
+                                      <div className="scale-container">
+                                        <div className="flex justify-between text-[10px] font-bold text-text-muted mb-3 uppercase tracking-wider">
+                                          <span>{q.labels?.[0]}</span>
+                                          <span>{q.labels?.[1]}</span>
+                                        </div>
+                                        <div className="grid grid-cols-11 gap-1">
+                                          {Array.from({ length: 11 }).map((_, i) => (
+                                            <div
+                                              key={i}
+                                              className={`flex aspect-square items-center justify-center rounded-lg border text-xs font-bold ${ans === i ? 'bg-gold border-gold text-[#08090C]' : 'bg-surface border-border text-text-muted'}`}
+                                            >
+                                              {i}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {q.type === 'text' && (
+                                      <div className="rounded-xl border border-border bg-surface/50 px-4 py-3.5 text-sm leading-relaxed text-text-secondary italic">
+                                        {ans || "No answer provided"}
+                                      </div>
+                                    )}
+
+                                    {q.type === 'multi' && (
+                                      <div className="flex flex-col gap-2">
+                                        {q.opts?.map((opt, i) => {
+                                          const isSelected = (ans || []).includes(i);
+                                          return (
+                                            <div
+                                              key={i}
+                                              className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left ${isSelected ? 'border-gold-border bg-gold-dim' : 'border-border bg-surface/50'}`}
+                                            >
+                                              <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded bg-surface2 border ${isSelected ? 'bg-gold border-gold' : 'border-border'}`}>
+                                                {isSelected && <CheckCircle2 size={10} className="text-[#08090C]" />}
+                                              </div>
+                                              <span className={`text-sm leading-tight ${isSelected ? 'text-text' : 'text-text-secondary'}`}>
+                                                {opt.t}
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {idx < QUESTIONS.length - 1 && <div className="mt-12 h-px bg-border/30 w-full" />}
                                 </div>
                               );
                             })}
