@@ -155,11 +155,20 @@ export default function App() {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error details:', error);
+        if (error.code === '42501') {
+          alert('Permission denied! Please add the DELETE policy in Supabase (run the SQL command I provided).');
+        } else {
+          throw error;
+        }
+        return;
+      }
       setSubmissions(prev => prev.filter(s => s.id !== id));
+      if (selectedSubmission?.id === id) setSelectedSubmission(null);
     } catch (error) {
       console.error('Supabase delete error:', error);
-      alert('Error deleting submission.');
+      alert('Error deleting submission. Check console for details.');
     }
   };
 
@@ -266,10 +275,16 @@ export default function App() {
               .insert([payload])
               .select();
             
+            if (error) {
+              console.error('Auto-save error:', error);
+              // If it fails, we don't alert the user to avoid interrupting the flow,
+              // but we log it. The manual submit will still try to insert.
+            }
+            
             if (data && data[0]) {
               setAssessmentId(data[0].id);
+              console.log('Assessment auto-saved with ID:', data[0].id);
             }
-            if (error) console.error('Auto-save error:', error);
           }
         } catch (err) {
           console.error('Auto-save failed:', err);
