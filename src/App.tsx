@@ -48,6 +48,7 @@ const LogoSymbol = () => (
 );
 
 // Admin password from environment (VITE_ prefix for client access)
+// State refresh bump
 const ADMIN_PWD_1 = import.meta.env.VITE_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD_1 || 'change_this_password';
 const ADMIN_PWD_2 = process.env.ADMIN_PASSWORD_2 || 'change_this_password';
 
@@ -104,7 +105,11 @@ export default function App() {
       console.log('Attempting login. Provided length:', pwd.length, 'Expected 1:', ADMIN_PWD_1.length, 'Expected 2:', ADMIN_PWD_2.length);
       
       // Client-side password check for simplicity in serverless environments
-      if (pwd.trim() !== ADMIN_PWD_1.trim() && pwd.trim() !== ADMIN_PWD_2.trim()) {
+      const p1 = ADMIN_PWD_1.trim();
+      const p2 = ADMIN_PWD_2.trim();
+      const input = pwd.trim();
+      
+      if (input !== p1 && input !== p2) {
         setAdminError('Invalid password');
         setIsLoading(false);
         return;
